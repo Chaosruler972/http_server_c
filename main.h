@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 
 #define BUFFER_SIZE 2048
+#define BYTES 1024
 
 #define ERROR_CODE_USAGE_FORMAT 1
 #define ERROR_CODE_BAD_DIRECTORY 2
@@ -23,27 +24,27 @@
 #define FUNCTION_ERROR -1
 #define LISTENERS 64
 
-struct 
+struct
 {
     char* ext;
     char* filetype;
 } extensions [] = {
-	{"gif", "image/gif" },  
-	{"jpg", "image/jpeg"}, 
+	{"gif", "image/gif" },
+	{"jpg", "image/jpeg"},
 	{"jpeg","image/jpeg"},
-	{"png", "image/png" },  
-	{"zip", "image/zip" },  
-	{"gz",  "image/gz"  },  
-	{"tar", "image/tar" },  
-	{"htm", "text/html" },  
-	{"html","text/html" },  
-	{"php", "image/php" },  
-	{"cgi", "text/cgi"  },  
-	{"asp","text/asp"   },  
-	{"jsp", "image/jsp" },  
-	{"xml", "text/xml"  },  
+	{"png", "image/png" },
+	{"zip", "image/zip" },
+	{"gz",  "image/gz"  },
+	{"tar", "image/tar" },
+	{"htm", "text/html" },
+	{"html","text/html" },
+	{"php", "image/php" },
+	{"cgi", "text/cgi"  },
+	{"asp","text/asp"   },
+	{"jsp", "image/jsp" },
+	{"xml", "text/xml"  },
 	{"js","text/js"     },
-        {"css","test/css"   }, 
+        {"css","test/css"   },
         {"mp3","audio/mpeg"},
         {"wav","audio/wav"},
         {"flac","audio/mpeg"},
