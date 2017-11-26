@@ -27,11 +27,13 @@ int main(int argc, char** argv)
         exit(ERROR_CODE_USAGE_FORMAT); // error code - usage error
     }
 
+    /*
     if(argv[2][strlen(argv[2]-1)]!='/')
     {
         printf("You forgot the / in the end of the file path!\n");
          exit(ERROR_CODE_USAGE_FORMAT); // error code - usage error
     }
+     */
 
     char* linux_root_directories[] = {/*"/" ,*/"/etc","/bin","/lib","/tmp","/usr","/dev","/sbin",NULL};
 
@@ -128,13 +130,20 @@ int main(int argc, char** argv)
                     FD_SET(newfd,&master);
                     if(newfd> fdmax)
                     {
+
+                        client** new_arr = calloc(newfd,sizeof(client*));
+                        int ind;
+                        for(ind=0; i<fdmax; i++)
+                            new_arr[ind] = arr[ind];
+                        free(arr);
+                        arr = new_arr;
                         fdmax = newfd;
-                        arr = realloc(arr,sizeof(client*) * fdmax);
                         if(arr == 0)
                         {
                             printf("ERROR - realloc\n\n");
                             exit(FUNCTION_ERROR);
                         }
+
                     }
                     client* c = calloc(1,sizeof(client));
                     c->client_addr.sin_family = clientaddr.sin_family;
@@ -162,9 +171,11 @@ int main(int argc, char** argv)
                             printf("ERROR - recv()\n\n");
                         }
                         close(i);
-                        if(arr[i]->request != 0)
+
+                        if(arr[i]!=NULL && arr[i]->request != NULL)
                             free(arr[i]->request);
                         free(arr[i]);
+                        arr[i] = NULL;
                         FD_CLR(i,&master);
                         printf("Hanging up complete\n");
                     }
@@ -174,15 +185,18 @@ int main(int argc, char** argv)
                         printf("Push start mechanism on socket %d\n",i);
                         #endif
                         client* c = arr[i];
-                        if(c->request != 0)
+                        if(c!=NULL && c->request != 0)
                         {
                             free(c->request);
+                            free(c);
                             c->request = 0;
                         }
+                        c = calloc(1,sizeof(client));
                         c->request = calloc(length+1, sizeof(char) );
                         strncpy(c->request,buf,length);
                         c->request[length] = '\0';
                         push(&stack,i);
+                        arr[i] = c;
                         #if DEBUG == 1
                         printf("Pushed new request on socket %d\n",i);
                         #endif
@@ -219,17 +233,79 @@ int main(int argc, char** argv)
     				    printf("file: %s\n", path);
                 if ( (fd=open(path, O_RDONLY))!=-1 )    //FILE FOUND
                 {
-                		send(sock_to_reply, "HTTP/1.0 200 OK\r\n\r\n", 17, 0);
-                		while ( (bytes_read=read(fd, data_to_send, BYTES))>0 )
-                		    write (sock_to_reply, data_to_send, bytes_read);
+                    send(sock_to_reply, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n", strlen("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"), 0);
+                	char** files = 0;
+                    int count_files = 0;
+                    while ( (bytes_read=read(fd, data_to_send, BYTES))>0 )
+                    {
+                        write(sock_to_reply, data_to_send, bytes_read);
+                        char* ptr = strstr(data_to_send,"src=");
+                        while( ptr!=NULL )
+                        {
+                            ptr = strchr(ptr,'"');
+                            if(ptr == NULL)
+                                break;
+                            char* ptr2 = strchr(ptr,'"');
+                            if(ptr2 == NULL)
+                                break;
+                            *ptr2 = '\0';
+                            if(!strstr(ptr,"http"))
+                            {
+                                *ptr2 = '"';
+                                ptr = strstr(ptr,"src=");
+                            }
+                            else
+                            {
+                                char** new_files = calloc(count_files+1,sizeof(char*));
+                                int ind;
+                                for(ind=0; i<count_files;ind++)
+                                    new_files[ind] = files[ind];
+                                free(files);
+                                files = new_files;
+                                files[count_files] = malloc(sizeof((ptr2-ptr+1)*sizeof(char)));
+                                strcpy(files[count_files],ptr);
+                                count_files++;
+                                *ptr2 = '"';
+                                ptr = strstr(ptr,"src=");
+                            }
+                        }
+                    }
+                    write(sock_to_reply,"\r\n",strlen("\r\n"));
+                    while(files)
+                    {
+
+                        int fd2;
+                        char path2[100];
+                        strcpy(path2,argv[2]);
+                        strcat(path2,"/");
+                        strcat(path2,files[count_files]);
+                        if((fd2=open(path2, O_RDONLY))!=-1)
+                        {
+                            while ( (bytes_read=read(fd2, data_to_send, BYTES))>0 )
+                                write(sock_to_reply, data_to_send, bytes_read);
+                        }
+                        free(files[count_files]);
+                        if(count_files == 0)
+                        {
+                            free(files);
+                            break;
+                        }
+                        count_files--;
+                    }
+                    write(sock_to_reply,"\r\n\r\n",strlen("\r\n\r\n"));
                 }
                 else
-                  write(sock_to_reply,"HTTP/1.0 404 Not Found\n", 23);
+                  write(sock_to_reply,"HTTP/1.1 404 Not Found\n", 23);
+
               }
             }
 
             free(arr[sock_to_reply]->request);
             arr[sock_to_reply]->request = 0;
+            free(arr[sock_to_reply]);
+            arr[sock_to_reply]=0;
+            FD_CLR(sock_to_reply,&master);
+            close(sock_to_reply);
         }
     }
     destroy_stack(&stack);

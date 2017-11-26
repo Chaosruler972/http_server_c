@@ -12,9 +12,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 
 #define BUFFER_SIZE 2048
-#define BYTES 1024
+#define BYTES 4096
 
 #define ERROR_CODE_USAGE_FORMAT 1
 #define ERROR_CODE_BAD_DIRECTORY 2
